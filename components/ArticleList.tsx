@@ -43,6 +43,9 @@ interface ArticleListProps {
   handleScrollToTop: () => void;
   articleListRef: React.RefObject<HTMLDivElement>;
   visiblePageTokens: (number | string)[];
+  feedId: string;
+  initialScrollPosition?: number;
+  onScrollPositionChange?: (feedId: string, position: number) => void;
 }
 
 export const ArticleList: React.FC<ArticleListProps> = ({
@@ -72,11 +75,44 @@ export const ArticleList: React.FC<ArticleListProps> = ({
   showScrollToTop,
   handleScrollToTop,
   articleListRef,
-  visiblePageTokens
+  visiblePageTokens,
+  feedId,
+  initialScrollPosition = 0,
+  onScrollPositionChange
 }) => {
   const [pullDistance, setPullDistance] = React.useState(0);
   const touchStartRef = React.useRef<number>(0);
   const rafRef = React.useRef<number | null>(null);
+
+  // 恢复滚动位置（挂载时）
+  React.useLayoutEffect(() => {
+    if (initialScrollPosition > 0 && articleListRef.current) {
+      const viewport = articleListRef.current.querySelector(
+        '[data-radix-scroll-area-viewport]'
+      ) as HTMLElement | null;
+      if (viewport) {
+        viewport.scrollTop = initialScrollPosition;
+      }
+    }
+  }, []); // 只在挂载时执行一次
+
+  // 保存滚动位置（卸载时）
+  React.useEffect(() => {
+    const ref = articleListRef.current;
+    const currentFeedId = feedId;
+    const savePosition = onScrollPositionChange;
+    
+    return () => {
+      if (ref && savePosition) {
+        const viewport = ref.querySelector(
+          '[data-radix-scroll-area-viewport]'
+        ) as HTMLElement | null;
+        if (viewport) {
+          savePosition(currentFeedId, viewport.scrollTop);
+        }
+      }
+    };
+  }, [feedId, onScrollPositionChange]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (articleListRef.current?.scrollTop === 0) {

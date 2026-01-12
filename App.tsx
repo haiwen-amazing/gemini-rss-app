@@ -101,6 +101,11 @@ const App: React.FC = () => {
   const [pendingArticleId, setPendingArticleId] = useState<string | null>(null);
 
   const articleListRef = useRef<HTMLDivElement>(null);
+  const scrollPositionsRef = useRef<Map<string, number>>(new Map());
+
+  const handleScrollPositionChange = useCallback((feedId: string, position: number) => {
+    scrollPositionsRef.current.set(feedId, position);
+  }, []);
 
   const groupedFeeds = useMemo(() => {
     const root: Map<string, CategoryNode> = new Map();
@@ -433,7 +438,7 @@ const App: React.FC = () => {
           />
         )}
 
-        {selectedFeed && !activeArticle && (
+        {selectedFeed && !activeArticle && selectedFeedMeta && (
           <ArticleList 
             selectedFeed={selectedFeed} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}
             selectedDate={selectedDate} isRightSidebarOpen={isRightSidebarOpen} setIsRightSidebarOpen={setIsRightSidebarOpen}
@@ -449,6 +454,9 @@ const App: React.FC = () => {
             filteredArticlesCount={filteredArticles.length} isLoadingMoreHistory={false} canLoadMoreHistory={false}
             showScrollToTop={showScrollToTop} handleScrollToTop={() => {}}
             articleListRef={articleListRef} visiblePageTokens={[]}
+            feedId={selectedFeedMeta.id}
+            initialScrollPosition={scrollPositionsRef.current.get(selectedFeedMeta.id) ?? 0}
+            onScrollPositionChange={handleScrollPositionChange}
           />
         )}
 
