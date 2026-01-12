@@ -774,10 +774,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
                         <Card key={provider.id} className="group hover:border-primary/50 transition-all">
                           <div className="p-4 flex items-center justify-between gap-4">
                             <div className="flex items-center gap-4">
-                              <div className={cn(
-                                "w-10 h-10 rounded-lg flex items-center justify-center text-white font-black text-[10px]",
-                                provider.type === 'gemini' ? 'bg-indigo-500' : 'bg-emerald-500'
-                              )}>
+                                <div className={cn(
+                                  "w-10 h-10 rounded-lg flex items-center justify-center text-white font-black text-[10px]",
+                                  "bg-primary"
+                                )}>
                                 {provider.type === 'gemini' ? 'GEM' : 'GPT'}
                               </div>
                               <div className="min-w-0">
@@ -821,7 +821,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
                               onClick={() => { setActiveProviderForModels(p.id); setAvailableModels([]); setFetchError(null); setModelSearchQuery(''); }}
                               className="rounded-lg gap-2 whitespace-nowrap"
                             >
-                              <div className={cn("w-2 h-2 rounded-full", p.type === 'gemini' ? 'bg-indigo-500' : 'bg-emerald-500')} />
+                              <div className={cn("w-2 h-2 rounded-full", "bg-primary")} />
                               {p.name}
                             </Button>
                           ))}
