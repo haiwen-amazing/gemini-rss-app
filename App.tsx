@@ -103,9 +103,22 @@ const App: React.FC = () => {
   const articleListRef = useRef<HTMLDivElement>(null);
   const scrollPositionsRef = useRef<Map<string, number>>(new Map());
 
+  const getArticleListViewport = useCallback(() => {
+    return articleListRef.current?.querySelector(
+      '[data-radix-scroll-area-viewport]'
+    ) as HTMLElement | null;
+  }, []);
+
+  const resetArticleListScroll = useCallback((feedId?: string | null) => {
+    const viewport = getArticleListViewport();
+    if (viewport) viewport.scrollTop = 0;
+    if (feedId) scrollPositionsRef.current.set(feedId, 0);
+  }, [getArticleListViewport]);
+
   const handleScrollPositionChange = useCallback((feedId: string, position: number) => {
     scrollPositionsRef.current.set(feedId, position);
   }, []);
+
 
   const groupedFeeds = useMemo(() => {
     const root: Map<string, CategoryNode> = new Map();
@@ -305,6 +318,13 @@ const App: React.FC = () => {
   const handleArticleSelect = (article: Article) => {
     const articleId = getArticleId(article);
     const currentArticleId = activeArticle ? getArticleId(activeArticle) : null;
+
+    if (selectedFeedMeta) {
+      const viewport = getArticleListViewport();
+      if (viewport) {
+        scrollPositionsRef.current.set(selectedFeedMeta.id, viewport.scrollTop);
+      }
+    }
     
     setActiveArticle(article);
     markAsRead(articleId);
@@ -443,6 +463,8 @@ const App: React.FC = () => {
             selectedFeed={selectedFeed} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}
             selectedDate={selectedDate} isRightSidebarOpen={isRightSidebarOpen} setIsRightSidebarOpen={setIsRightSidebarOpen}
             activeFilters={activeFilters} handleFilterToggle={(f) => {
+              if (selectedFeedMeta) resetArticleListScroll(selectedFeedMeta.id);
+              handlePageChange(1);
               if (f === '__reset__') setActiveFilters([]);
               else setActiveFilters(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f]);
             }}
@@ -509,7 +531,16 @@ const App: React.FC = () => {
         <div className="p-4 flex flex-col gap-6 h-full overflow-y-auto">
           <div className="flex flex-col gap-1">
             <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">时间筛选</h3>
-            <CalendarWidget selectedDate={selectedDate} onDateSelect={setSelectedDate} articleCountByDate={articleCountByDate} />
+            <CalendarWidget
+              selectedDate={selectedDate}
+              onDateSelect={(date) => {
+                setSelectedDate(date);
+                handlePageChange(1);
+                if (selectedFeedMeta) resetArticleListScroll(selectedFeedMeta.id);
+              }}
+              articleCountByDate={articleCountByDate}
+            />
+
           </div>
           
           <div className="flex flex-col gap-1">

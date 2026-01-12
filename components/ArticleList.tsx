@@ -84,35 +84,35 @@ export const ArticleList: React.FC<ArticleListProps> = ({
   const touchStartRef = React.useRef<number>(0);
   const rafRef = React.useRef<number | null>(null);
 
-  // 恢复滚动位置（挂载时）
-  React.useLayoutEffect(() => {
-    if (initialScrollPosition > 0 && articleListRef.current) {
-      const viewport = articleListRef.current.querySelector(
-        '[data-radix-scroll-area-viewport]'
-      ) as HTMLElement | null;
-      if (viewport) {
-        viewport.scrollTop = initialScrollPosition;
-      }
-    }
-  }, []); // 只在挂载时执行一次
+  const getViewport = React.useCallback(() => {
+    return articleListRef.current?.querySelector(
+      '[data-radix-scroll-area-viewport]'
+    ) as HTMLElement | null;
+  }, [articleListRef]);
 
-  // 保存滚动位置（卸载时）
+  // 恢复滚动位置
+  React.useLayoutEffect(() => {
+    const viewport = getViewport();
+    if (!viewport) return;
+    const targetPosition = initialScrollPosition ?? 0;
+    const frame = requestAnimationFrame(() => {
+      viewport.scrollTop = targetPosition;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [feedId, initialScrollPosition, getViewport]);
+
+  // 保存滚动位置（滚动时）
   React.useEffect(() => {
-    const ref = articleListRef.current;
-    const currentFeedId = feedId;
-    const savePosition = onScrollPositionChange;
-    
-    return () => {
-      if (ref && savePosition) {
-        const viewport = ref.querySelector(
-          '[data-radix-scroll-area-viewport]'
-        ) as HTMLElement | null;
-        if (viewport) {
-          savePosition(currentFeedId, viewport.scrollTop);
-        }
-      }
+    const viewport = getViewport();
+    if (!viewport || !onScrollPositionChange) return;
+    const handleScroll = () => {
+      onScrollPositionChange(feedId, viewport.scrollTop);
     };
-  }, [feedId, onScrollPositionChange]);
+    viewport.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      viewport.removeEventListener('scroll', handleScroll);
+    };
+  }, [feedId, onScrollPositionChange, getViewport]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (articleListRef.current?.scrollTop === 0) {
