@@ -172,7 +172,12 @@ const App: React.FC = () => {
 
   const handleFeedSelect = useCallback(async (meta: FeedMeta, options?: { skipHistory?: boolean; articleId?: string }) => {
     if (!options?.skipHistory && typeof window !== 'undefined') {
-      window.history.pushState({ feedId: meta.id }, '', buildFeedPath(meta.id));
+      // 如果已经在同一个 feed，使用 replaceState 而不是 pushState，避免重复历史记录
+      if (selectedFeedMeta?.id === meta.id) {
+        window.history.replaceState({ feedId: meta.id }, '', buildFeedPath(meta.id));
+      } else {
+        window.history.pushState({ feedId: meta.id }, '', buildFeedPath(meta.id));
+      }
     }
     setSelectedFeedMeta(meta);
     setActiveArticle(null);
@@ -293,12 +298,23 @@ const App: React.FC = () => {
   }, [selectedFeedMeta, selectedFeed, historyStatus, setFeedContentCache, setSelectedFeed]);
 
   const handleArticleSelect = (article: Article) => {
+    const articleId = getArticleId(article);
+    const currentArticleId = activeArticle ? getArticleId(activeArticle) : null;
+    
     setActiveArticle(article);
-    markAsRead(getArticleId(article));
+    markAsRead(articleId);
     // Reset translation state when switching articles
     setShowTranslation(false);
     setTranslatedContent(null);
-    if (selectedFeedMeta) window.history.pushState({}, '', buildArticlePath(selectedFeedMeta.id, getArticleId(article)));
+    
+    if (selectedFeedMeta) {
+      // 如果已经在看同一篇文章，使用 replaceState 而不是 pushState，避免重复历史记录
+      if (currentArticleId === articleId) {
+        window.history.replaceState({}, '', buildArticlePath(selectedFeedMeta.id, articleId));
+      } else {
+        window.history.pushState({}, '', buildArticlePath(selectedFeedMeta.id, articleId));
+      }
+    }
   };
 
   const handleRunAnalysis = useCallback(async () => {
@@ -364,8 +380,11 @@ const App: React.FC = () => {
     } else if (route.articleId && selectedFeed) {
       const art = selectedFeed.items.find(i => getArticleId(i) === route.articleId);
       if (art) setActiveArticle(art);
+    } else if (!route.articleId && activeArticle) {
+      // URL 中没有 articleId 但当前有 activeArticle，需要清除（处理从文章页后退到列表页的情况）
+      setActiveArticle(null);
     }
-  }, [feedConfigs, handleFeedSelect, selectedFeed, selectedFeedMeta]);
+  }, [feedConfigs, handleFeedSelect, selectedFeed, selectedFeedMeta, activeArticle, setActiveArticle]);
 
   useEffect(() => {
     const handlePopState = () => syncStateWithRoute(parseRoute(), true);
