@@ -642,6 +642,8 @@ const App: React.FC = () => {
             initialScrollPosition={scrollPositionsRef.current.get(selectedFeedMeta.id) ?? 0}
             onScrollPositionChange={handleScrollPositionChange}
             onShowToast={showToast}
+            loadedCount={historyStatus[selectedFeedMeta.id]?.loaded}
+            totalCount={historyStatus[selectedFeedMeta.id]?.total}
           />
         )}
 

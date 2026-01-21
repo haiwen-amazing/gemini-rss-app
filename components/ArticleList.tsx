@@ -47,6 +47,8 @@ interface ArticleListProps {
   initialScrollPosition?: number;
   onScrollPositionChange?: (feedId: string, position: number) => void;
   onShowToast?: (message: string, variant?: 'default' | 'destructive') => void;
+  loadedCount?: number;
+  totalCount?: number;
 }
 
 export const ArticleList: React.FC<ArticleListProps> = ({
@@ -80,7 +82,9 @@ export const ArticleList: React.FC<ArticleListProps> = ({
   feedId,
   initialScrollPosition = 0,
   onScrollPositionChange,
-  onShowToast
+  onShowToast,
+  loadedCount,
+  totalCount
 }) => {
   const [pullDistance, setPullDistance] = React.useState(0);
   const touchStartRef = React.useRef<number>(0);
@@ -174,7 +178,21 @@ export const ArticleList: React.FC<ArticleListProps> = ({
           <div className="overflow-hidden">
             <h2 className="text-lg font-black truncate uppercase tracking-tight">{selectedFeed.title}</h2>
             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest hidden sm:block">
-              {selectedDate ? `筛选日期: ${selectedDate.toLocaleDateString()}` : '最新内容'}
+              {selectedDate ? (
+                `筛选日期: ${selectedDate.toLocaleDateString()}`
+              ) : (
+                <span className="flex items-center gap-2">
+                  <span>最新内容</span>
+                  {totalCount && totalCount > 0 && activeFilters.length === 0 && (
+                    <>
+                      <span className="w-px h-3 bg-border/60" />
+                      <span className="font-black text-foreground/80">
+                        已加载 {loadedCount} <span className="text-muted-foreground/50 mx-0.5">/</span> {totalCount}
+                      </span>
+                    </>
+                  )}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -277,9 +295,16 @@ export const ArticleList: React.FC<ArticleListProps> = ({
                   下一页
                 </Button>
               </div>
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                共 {filteredArticlesCount} 篇文章 • 第 {currentPage} / {totalPages || 1} 页
-              </p>
+              <div className="flex flex-col items-center gap-1">
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                  共 {filteredArticlesCount} 篇文章 • 第 {currentPage} / {totalPages || 1} 页
+                </p>
+                {!selectedDate && totalCount && loadedCount && totalCount > loadedCount && activeFilters.length === 0 && (
+                  <p className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-widest">
+                    仅显示已加载内容，翻页会自动预加载更多
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
