@@ -1,6 +1,6 @@
 
 
-import { Feed, Article, ImageProxyMode, MediaUrl, createMediaUrl, selectMediaUrl } from '../types';
+import { Feed, Article, FeedSummary, ImageProxyMode, MediaUrl, createMediaUrl, selectMediaUrl } from '../types';
 
 const RSS2JSON_API = 'https://api.rss2json.com/v1/api.json?rss_url=';
 const ALL_ORIGINS_RAW = 'https://api.allorigins.win/raw?url=';
@@ -81,6 +81,17 @@ export const fetchSystemFeeds = async (): Promise<SystemFeedConfig[]> => {
     return await response.json();
   } catch (e) {
     console.error("Could not fetch system feeds:", e);
+    return [];
+  }
+};
+
+export const fetchFeedSummaries = async (): Promise<FeedSummary[]> => {
+  try {
+    const response = await fetch('/api/feeds/summary');
+    if (!response.ok) throw new Error('Failed to load feed summaries');
+    return await response.json();
+  } catch (e) {
+    console.error('Could not fetch feed summaries:', e);
     return [];
   }
 };

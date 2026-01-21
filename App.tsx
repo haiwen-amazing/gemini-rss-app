@@ -4,6 +4,7 @@ import { X, Sparkles } from "lucide-react";
 import { 
   fetchRSS, 
   fetchSystemFeeds, 
+  fetchFeedSummaries,
   fetchHistory, 
   setCurrentFeedCanProxyImages, 
   getMediaUrl,
@@ -16,7 +17,8 @@ import {
   Language, 
   ArticleCategory, 
   AISettings, 
-  FeedMeta 
+  FeedMeta,
+  MediaUrl
 } from './types';
 import { LeftSidebar, CategoryNode } from './components/LeftSidebar';
 import { ArticleList } from './components/ArticleList';
@@ -39,12 +41,14 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from '@/hooks/use-toast';
+import { get as getFromIdb, set as setToIdb } from 'idb-keyval';
 
 const getArticleId = (article: Article): string => article.guid || article.link || `${article.title}-${article.pubDate}`;
 const buildFeedPath = (feedId: string): string => `/feed/${encodeURIComponent(feedId)}`;
 const buildArticlePath = (feedId: string, articleId: string): string => `${buildFeedPath(feedId)}/article/${encodeURIComponent(articleId)}`;
 
 const LAST_VALID_FEED_KEY = 'last_valid_feed_id';
+const FEED_AVATAR_CACHE_PREFIX = 'feed_avatar:';
 
 const getLastValidFeedId = (): string | null => {
   if (typeof window === 'undefined') return null;
@@ -62,6 +66,28 @@ const setLastValidFeedId = (feedId: string): void => {
   } catch {
     return;
   }
+};
+
+const isMediaUrl = (value: unknown): value is MediaUrl => {
+  if (!value || typeof value !== 'object') return false;
+  const maybe = value as MediaUrl;
+  return typeof maybe.original === 'string' && typeof maybe.proxied === 'string';
+};
+
+const loadFeedAvatarCache = async (feedIds: string[]): Promise<Record<string, MediaUrl>> => {
+  const entries = await Promise.all(
+    feedIds.map(async (id) => {
+      const cached = await getFromIdb(`${FEED_AVATAR_CACHE_PREFIX}${id}`);
+      return [id, cached] as const;
+    })
+  );
+
+  return entries.reduce<Record<string, MediaUrl>>((acc, [id, cached]) => {
+    if (isMediaUrl(cached) && (cached.original || cached.proxied)) {
+      acc[id] = cached;
+    }
+    return acc;
+  }, {});
 };
 
 const parseRoute = () => {
@@ -101,6 +127,8 @@ const App: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loadingFeedId, setLoadingFeedId] = useState<string | null>(null);
   const [historyStatus, setHistoryStatus] = useState<Record<string, { total: number; loaded: number }>>({});
+  const [feedSummaryMap, setFeedSummaryMap] = useState<Record<string, number>>({});
+  const [feedAvatarCache, setFeedAvatarCache] = useState<Record<string, MediaUrl>>({});
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -153,6 +181,14 @@ const App: React.FC = () => {
     });
   }, [toast]);
 
+  const updateFeedAvatarCache = useCallback((feedId: string, image?: MediaUrl) => {
+    if (!image || (!image.original && !image.proxied)) return;
+    setFeedAvatarCache(prev => ({ ...prev, [feedId]: image }));
+    setToIdb(`${FEED_AVATAR_CACHE_PREFIX}${feedId}`, image).catch(err => {
+      console.warn('Failed to save feed avatar to IDB:', err);
+    });
+  }, []);
+
 
   const groupedFeeds = useMemo(() => {
     const root: Map<string, CategoryNode> = new Map();
@@ -181,6 +217,17 @@ const App: React.FC = () => {
     try {
       const configs = await fetchSystemFeeds();
       setFeedConfigs(configs);
+      const [summaries, avatars] = await Promise.all([
+        fetchFeedSummaries(),
+        loadFeedAvatarCache(configs.map(feed => feed.id))
+      ]);
+      setFeedSummaryMap(
+        summaries.reduce<Record<string, number>>((acc, summary) => {
+          acc[summary.id] = summary.articleCount;
+          return acc;
+        }, {})
+      );
+      setFeedAvatarCache(avatars);
     } catch (e) { setErrorMsg("初始化订阅源出错"); } finally { setLoading(false); }
   }, [setFeedConfigs]);
 
@@ -266,6 +313,11 @@ const App: React.FC = () => {
       // 更新缓存和状态
       setFeedContentCache(prev => ({ ...prev, [meta.id]: finalFeed }));
       setSelectedFeed(finalFeed);
+      updateFeedAvatarCache(meta.id, finalFeed.image);
+      setFeedSummaryMap(prev => ({
+        ...prev,
+        [meta.id]: Math.max(prev[meta.id] ?? 0, historyData.total, finalFeed.items.length)
+      }));
       setHistoryStatus(prev => ({
         ...prev,
         [meta.id]: { total: historyData.total, loaded: mergedItems.length }
@@ -275,7 +327,7 @@ const App: React.FC = () => {
     } finally {
       setLoadingFeedId(null);
     }
-  }, [feedContentCache, setFeedContentCache, setSelectedFeed, setSelectedFeedMeta, setActiveArticle]);
+  }, [feedContentCache, setFeedContentCache, setSelectedFeed, setSelectedFeedMeta, setActiveArticle, updateFeedAvatarCache]);
 
   const handleRefresh = useCallback(async () => {
     if (!selectedFeedMeta || isRefreshing) return;
@@ -294,6 +346,11 @@ const App: React.FC = () => {
       // 4. 更新状态，回到第一页
       setFeedContentCache(prev => ({ ...prev, [selectedFeedMeta.id]: finalFeed }));
       setSelectedFeed(finalFeed);
+      updateFeedAvatarCache(selectedFeedMeta.id, finalFeed.image);
+      setFeedSummaryMap(prev => ({
+        ...prev,
+        [selectedFeedMeta.id]: Math.max(prev[selectedFeedMeta.id] ?? 0, historyData.total, finalFeed.items.length)
+      }));
       setHistoryStatus(prev => ({
         ...prev,
         [selectedFeedMeta.id]: { total: historyData.total, loaded: mergedItems.length }
@@ -304,7 +361,7 @@ const App: React.FC = () => {
     } finally {
       setIsRefreshing(false);
     }
-  }, [selectedFeedMeta, isRefreshing, setFeedContentCache]);
+  }, [selectedFeedMeta, isRefreshing, setFeedContentCache, updateFeedAvatarCache]);
 
   // 分页切换时预加载下一页
   const handlePageChange = useCallback((newPage: number) => {
@@ -542,6 +599,7 @@ const App: React.FC = () => {
         errorMsg={errorMsg} sidebarMode={sidebarMode} setSidebarMode={setSidebarMode}
         openFolderPath={openFolderPath} setOpenFolderPath={setOpenFolderPath}
         groupedFeeds={groupedFeeds} feedContentCache={feedContentCache}
+        feedSummaryMap={feedSummaryMap} feedAvatarCache={feedAvatarCache}
         selectedFeedMeta={selectedFeedMeta} loadingFeedId={loadingFeedId}
         handleFeedSelect={handleFeedSelect} collapsedCategories={collapsedCategories}
         toggleCategoryCollapse={(p) => setCollapsedCategories(prev => {

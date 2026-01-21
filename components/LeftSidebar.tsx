@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { FeedItem } from './FeedItem';
-import { Feed, FeedMeta } from '../types';
+import { Feed, FeedMeta, MediaUrl } from '../types';
 import { cn } from "@/lib/utils";
 import { proxyImageUrl, getMediaUrl } from '../services/rssService';
 
@@ -41,6 +41,8 @@ interface LeftSidebarProps {
   setOpenFolderPath: (path: string | null) => void;
   groupedFeeds: Map<string, CategoryNode>;
   feedContentCache: Record<string, Feed>;
+  feedSummaryMap: Record<string, number>;
+  feedAvatarCache: Record<string, MediaUrl>;
   selectedFeedMeta: FeedMeta | null;
   loadingFeedId: string | null;
   handleFeedSelect: (feed: FeedMeta) => void;
@@ -64,16 +66,22 @@ const getNodeByPath = (groupedFeeds: Map<string, CategoryNode>, path: string): C
   return node;
 };
 
-const getFolderPreviews = (node: CategoryNode, feedContentCache: Record<string, Feed>): string[] => {
+const getFolderPreviews = (
+  node: CategoryNode,
+  feedContentCache: Record<string, Feed>,
+  feedAvatarCache: Record<string, MediaUrl>
+): string[] => {
   const previews: string[] = [];
   for (const meta of node.feeds) {
     if (previews.length >= 4) break;
     const content = feedContentCache[meta.id];
-    previews.push(getMediaUrl(content?.image) || `https://ui-avatars.com/api/?name=${encodeURIComponent(meta.customTitle || meta.id)}&background=3b82f6&color=fff&size=64`);
+    const cachedAvatar = feedAvatarCache[meta.id];
+    const previewUrl = getMediaUrl(content?.image || cachedAvatar);
+    previews.push(previewUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(meta.customTitle || meta.id)}&background=3b82f6&color=fff&size=64`);
   }
   if (previews.length < 4) {
     for (const child of node.children.values()) {
-      const childPreviews = getFolderPreviews(child, feedContentCache);
+      const childPreviews = getFolderPreviews(child, feedContentCache, feedAvatarCache);
       for (const preview of childPreviews) {
         if (previews.length >= 4) break;
         previews.push(preview);
@@ -101,6 +109,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   setOpenFolderPath,
   groupedFeeds,
   feedContentCache,
+  feedSummaryMap,
+  feedAvatarCache,
   selectedFeedMeta,
   loadingFeedId,
   handleFeedSelect,
@@ -131,7 +141,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   };
 
   const renderFolder = (node: CategoryNode) => {
-    const previews = getFolderPreviews(node, feedContentCache);
+    const previews = getFolderPreviews(node, feedContentCache, feedAvatarCache);
     const totalCount = countAllFeeds(node);
     return (
       <div key={node.path} className="w-full">
@@ -188,6 +198,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                   <FeedItem
                     feedMeta={meta}
                     feedContent={content}
+                    feedAvatar={feedAvatarCache[meta.id]}
+                    feedArticleCount={feedSummaryMap[meta.id]}
                     mode="list"
                     isSelected={selectedFeedMeta?.id === meta.id}
                     isLoading={loadingFeedId === meta.id}
@@ -285,7 +297,19 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                       <div className="grid grid-cols-2 gap-3">
                         {currentNode.feeds.map(meta => {
                           const content = feedContentCache[meta.id] || null;
-                          return <FeedItem key={meta.id} feedMeta={meta} feedContent={content} mode="grid" isSelected={selectedFeedMeta?.id === meta.id} isLoading={loadingFeedId === meta.id} onSelect={handleFeedSelect} />;
+                          return (
+                            <FeedItem
+                              key={meta.id}
+                              feedMeta={meta}
+                              feedContent={content}
+                              feedAvatar={feedAvatarCache[meta.id]}
+                              feedArticleCount={feedSummaryMap[meta.id]}
+                              mode="grid"
+                              isSelected={selectedFeedMeta?.id === meta.id}
+                              isLoading={loadingFeedId === meta.id}
+                              onSelect={handleFeedSelect}
+                            />
+                          );
                         })}
                         {childrenArray.map(child => renderSubfolder(child))}
                       </div>
@@ -301,7 +325,19 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                       <div className="grid grid-cols-2 gap-3">
                         {uncategorized[1].feeds.map(meta => {
                           const content = feedContentCache[meta.id] || null;
-                          return <FeedItem key={meta.id} feedMeta={meta} feedContent={content} mode="grid" isSelected={selectedFeedMeta?.id === meta.id} isLoading={loadingFeedId === meta.id} onSelect={handleFeedSelect} />;
+                          return (
+                            <FeedItem
+                              key={meta.id}
+                              feedMeta={meta}
+                              feedContent={content}
+                              feedAvatar={feedAvatarCache[meta.id]}
+                              feedArticleCount={feedSummaryMap[meta.id]}
+                              mode="grid"
+                              isSelected={selectedFeedMeta?.id === meta.id}
+                              isLoading={loadingFeedId === meta.id}
+                              onSelect={handleFeedSelect}
+                            />
+                          );
                         })}
                       </div>
                     )}
@@ -318,7 +354,19 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                   if (key === '__uncategorized__') {
                     return node.feeds.map(meta => {
                       const content = feedContentCache[meta.id] || null;
-                      return <FeedItem key={meta.id} feedMeta={meta} feedContent={content} mode="list" isSelected={selectedFeedMeta?.id === meta.id} isLoading={loadingFeedId === meta.id} onSelect={handleFeedSelect} />;
+                      return (
+                        <FeedItem
+                          key={meta.id}
+                          feedMeta={meta}
+                          feedContent={content}
+                          feedAvatar={feedAvatarCache[meta.id]}
+                          feedArticleCount={feedSummaryMap[meta.id]}
+                          mode="list"
+                          isSelected={selectedFeedMeta?.id === meta.id}
+                          isLoading={loadingFeedId === meta.id}
+                          onSelect={handleFeedSelect}
+                        />
+                      );
                     });
                   }
                   return renderCategoryNode(node);
