@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Feed, FeedMeta } from '../types';
+import { Feed, FeedMeta, MediaUrl } from '../types';
 import { getMediaUrl, proxyImageUrl } from '../services/rssService';
 import { Check, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -10,15 +10,19 @@ type SidebarViewMode = 'list' | 'grid';
 interface FeedItemProps {
   feedMeta: FeedMeta;
   feedContent?: Feed | null;
+  feedAvatar?: MediaUrl;
+  feedArticleCount?: number;
   mode: SidebarViewMode;
   isSelected: boolean;
   isLoading?: boolean;
   onSelect: (feedMeta: FeedMeta) => void;
 }
 
-export const FeedItem: React.FC<FeedItemProps> = React.memo(({ feedMeta, feedContent, mode, isSelected, isLoading, onSelect }) => {
+export const FeedItem: React.FC<FeedItemProps> = React.memo(({ feedMeta, feedContent, feedAvatar, feedArticleCount, mode, isSelected, isLoading, onSelect }) => {
   const displayTitle = feedMeta.customTitle || feedContent?.title || feedMeta.id;
   const fallbackAvatar = useMemo(() => proxyImageUrl(`https://ui-avatars.com/api/?name=${encodeURIComponent(displayTitle)}&background=3b82f6&color=fff&size=128`), [displayTitle]);
+  const resolvedAvatar = getMediaUrl(feedContent?.image || feedAvatar) || fallbackAvatar;
+  const resolvedCount = feedContent ? feedContent.items.length : feedArticleCount;
 
   const handleClick = useCallback(() => {
     onSelect(feedMeta);
@@ -41,7 +45,7 @@ export const FeedItem: React.FC<FeedItemProps> = React.memo(({ feedMeta, feedCon
           title={displayTitle}
         >
           <img
-            src={getMediaUrl(feedContent?.image) || fallbackAvatar}
+            src={resolvedAvatar}
             alt={displayTitle}
             className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 bg-muted"
             loading="lazy"
@@ -80,24 +84,20 @@ export const FeedItem: React.FC<FeedItemProps> = React.memo(({ feedMeta, feedCon
           isSelected ? "bg-primary text-primary-foreground shadow-sm" : "text-foreground hover:bg-muted"
         )}
       >
-        {feedContent ? (
-          <img
-            src={getMediaUrl(feedContent.image) || fallbackAvatar}
-            alt=""
-            className={cn(
-              "w-8 h-8 rounded-md object-cover shrink-0 border bg-muted",
-              isSelected ? "border-primary-foreground/20" : "border-border"
-            )}
-            loading="lazy"
-            onError={(e) => { (e.target as HTMLImageElement).src = fallbackAvatar; }}
-          />
-        ) : (
-          <div className="w-8 h-8 bg-muted rounded-md shrink-0 animate-pulse" />
-        )}
+        <img
+          src={resolvedAvatar}
+          alt=""
+          className={cn(
+            "w-8 h-8 rounded-md object-cover shrink-0 border bg-muted",
+            isSelected ? "border-primary-foreground/20" : "border-border"
+          )}
+          loading="lazy"
+          onError={(e) => { (e.target as HTMLImageElement).src = fallbackAvatar; }}
+        />
         <div className="flex-1 overflow-hidden">
           <p className={cn("font-bold text-sm truncate", isSelected ? "text-primary-foreground" : "text-foreground")}>{displayTitle}</p>
-          {feedContent ? (
-            <p className={cn("text-[10px] font-medium truncate", isSelected ? "text-primary-foreground/70" : "text-muted-foreground")}>{feedContent.items.length} 篇文章</p>
+          {typeof resolvedCount === 'number' ? (
+            <p className={cn("text-[10px] font-medium truncate", isSelected ? "text-primary-foreground/70" : "text-muted-foreground")}>{resolvedCount} 篇文章</p>
           ) : (
             <div className="h-2 w-12 bg-muted rounded mt-1 animate-pulse" />
           )}

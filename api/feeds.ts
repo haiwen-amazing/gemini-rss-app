@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../db/index.js';
-import { feeds, NewFeed } from '../db/schema.js';
-import { eq, inArray } from 'drizzle-orm';
+import { feeds, history } from '../db/schema.js';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { validateAdminSecret } from '../lib/security.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -21,6 +21,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ============================================
     // GET: List feeds (public or admin)
     // ============================================
+    if (req.method === 'GET' && action === 'summary') {
+      const summaries = await db
+        .select({ id: history.feedId, articleCount: sql<number>`count(*)` })
+        .from(history)
+        .groupBy(history.feedId);
+
+      const normalized = summaries.map(summary => ({
+        id: summary.id,
+        articleCount: Number(summary.articleCount ?? 0),
+      }));
+
+      return res.status(200).json(normalized);
+    }
+
     if (req.method === 'GET' || (req.method === 'POST' && action === 'admin')) {
       // Admin list (requires secret via query param check - POST preferred for admin)
       if (action === 'admin') {

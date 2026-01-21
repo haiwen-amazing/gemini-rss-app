@@ -39,6 +39,10 @@
       "destination": "/api/feeds"
     },
     {
+      "source": "/api/feeds/summary",
+      "destination": "/api/feeds?action=summary"
+    },
+    {
       "source": "/api/history/:action(get|upsert)",
       "destination": "/api/history?action=:action"
     },

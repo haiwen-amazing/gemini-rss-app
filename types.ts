@@ -66,6 +66,11 @@ export interface FeedStats {
   articleCount: number;
 }
 
+export interface FeedSummary {
+  id: string;
+  articleCount: number;
+}
+
 // --- AI Settings Types ---
 
 export type AIProviderType = 'openai' | 'gemini';
