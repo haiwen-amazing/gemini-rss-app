@@ -137,14 +137,3 @@ export const validateAdminSecret = (headers: IncomingHttpHeaders | Headers): boo
   
   return !!providedSecret && providedSecret === adminSecret;
 };
-
-
-/**
- * Build proxied media URL
- */
-export const buildProxiedMediaUrl = (originalUrl: string): string => {
-  if (!originalUrl || !originalUrl.startsWith('http')) {
-    return originalUrl;
-  }
-  return `/api/media/proxy?url=${encodeURIComponent(originalUrl)}`;
-};

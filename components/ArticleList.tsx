@@ -1,15 +1,13 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  PanelLeft, 
-  PanelRight, 
-  Filter, 
-  RefreshCw, 
-  ArrowUp 
+import React, { useMemo } from 'react';
+import {
+  PanelLeft,
+  PanelRight,
+  Filter,
+  RefreshCw,
+  ArrowUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { ArticleCard } from './ArticleCard';
 import { FilterBar } from './FilterBar';
 import { Feed, Article } from '../types';
@@ -37,12 +35,7 @@ interface ArticleListProps {
   setCurrentPage: (page: number) => void;
   totalPages: number;
   filteredArticlesCount: number;
-  isLoadingMoreHistory: boolean;
-  canLoadMoreHistory: boolean;
-  showScrollToTop: boolean;
-  handleScrollToTop: () => void;
   articleListRef: React.RefObject<HTMLDivElement>;
-  visiblePageTokens: (number | string)[];
   feedId: string;
   initialScrollPosition?: number;
   onScrollPositionChange?: (feedId: string, position: number) => void;
@@ -73,12 +66,7 @@ export const ArticleList: React.FC<ArticleListProps> = ({
   setCurrentPage,
   totalPages,
   filteredArticlesCount,
-  isLoadingMoreHistory,
-  canLoadMoreHistory,
-  showScrollToTop,
-  handleScrollToTop,
   articleListRef,
-  visiblePageTokens,
   feedId,
   initialScrollPosition = 0,
   onScrollPositionChange,
@@ -89,6 +77,20 @@ export const ArticleList: React.FC<ArticleListProps> = ({
   const [pullDistance, setPullDistance] = React.useState(0);
   const touchStartRef = React.useRef<number>(0);
   const rafRef = React.useRef<number | null>(null);
+
+  const visiblePageTokens = useMemo((): (number | string)[] => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const tokens: (number | string)[] = [1];
+    if (currentPage > 3) tokens.push('…l');
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+    for (let i = start; i <= end; i++) tokens.push(i);
+    if (currentPage < totalPages - 2) tokens.push('…r');
+    tokens.push(totalPages);
+    return tokens;
+  }, [currentPage, totalPages]);
 
   const getViewport = React.useCallback(() => {
     return articleListRef.current?.querySelector(
@@ -307,35 +309,8 @@ export const ArticleList: React.FC<ArticleListProps> = ({
               </div>
             </div>
           )}
-
-          {(isLoadingMoreHistory || canLoadMoreHistory) && (
-            <div className="py-8 text-center">
-              <Badge variant="outline" className="px-4 py-1 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
-                {isLoadingMoreHistory ? '正在加载历史内容...' : '滑动到底部加载更多'}
-              </Badge>
-            </div>
-          )}
         </div>
       </ScrollArea>
-
-      <AnimatePresence>
-        {showScrollToTop && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-6 right-6 z-30"
-          >
-            <Button
-              size="icon"
-              onClick={handleScrollToTop}
-              className="w-12 h-12 rounded-full shadow-xl hover:scale-110 transition-transform"
-            >
-              <ArrowUp className="w-6 h-6" />
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

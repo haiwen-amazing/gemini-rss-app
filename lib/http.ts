@@ -9,39 +9,6 @@ interface FetchOptions {
 }
 
 /**
- * Fetch with timeout
- */
-export const fetchWithProxy = async (
-  targetUrl: string,
-  options: FetchOptions = {}
-): Promise<Response> => {
-  const { timeout = 15000, headers = {}, method = 'GET' } = options;
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-  try {
-    const target = new URL(targetUrl);
-
-    const normalizedHeaders = {
-      'Host': target.host,
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-      ...headers
-    };
-
-    const response = await fetch(targetUrl, {
-      method,
-      headers: normalizedHeaders,
-      signal: controller.signal,
-    });
-
-    return response;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-};
-
-/**
  * Fetch after validating resolved IP is not private (SSRF protection).
  * Uses original hostname for the actual request to maintain CDN compatibility.
  * 
