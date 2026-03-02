@@ -61,11 +61,6 @@ export enum Language {
   KOREAN = 'Korean'
 }
 
-export interface FeedStats {
-  feedName: string;
-  articleCount: number;
-}
-
 export interface FeedSummary {
   id: string;
   articleCount: number;

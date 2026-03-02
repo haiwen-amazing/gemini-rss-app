@@ -72,11 +72,17 @@ npm install
 在项目根目录创建 `.env.local`（不会被提交到 Git）：
 
 ```env
-# 可选：若使用系统默认 Gemini SDK，可在此处填入
-GEMINI_API_KEY=your-gemini-api-key-here
+# 数据库连接字符串（本地开发可选，部署时必需）
+DATABASE_URL=your-neon-connection-string
+
+# 管理后台密码（部署时必需）
+ADMIN_SECRET=your-admin-secret
+
+# 媒体代理大小限制（可选，默认 50MB）
+# MEDIA_PROXY_MAX_BYTES=52428800
 ```
 
-> 实际部署时，多数情况下会直接在前端「设置」中配置自己的 OpenAI 兼容 / Gemini / 反代 API。`GEMINI_API_KEY` 仅作兜底。
+> **重要**：AI 功能（翻译、总结、分类）需要在前端「设置」中配置 API 提供商。项目不再支持服务端 API key fallback，所有 AI 调用都使用用户自己配置的 provider。
 
 ### 4. 启动开发服务器
 
@@ -84,7 +90,19 @@ GEMINI_API_KEY=your-gemini-api-key-here
 npm run dev
 ```
 
-默认会在 `http://localhost:5173`（Vite 默认端口）启动前端。纯前端开发可直接跨域调用接口，生产环境请使用 Vercel + Neon 部署。
+默认会在 `http://localhost:5173`（Vite 默认端口）启动前端。
+
+**本地开发说明**：
+- 前端可以直接开发和预览 UI 交互
+- 后端 API（Vercel Functions）在本地开发时不会自动运行
+- 如需测试完整功能（RSS 抓取、历史记录、媒体代理等），建议部署到 Vercel 测试环境
+- 或使用 `vercel dev` 命令在本地模拟 Vercel Functions 环境（需要先安装 Vercel CLI）
+
+```bash
+# 可选：使用 Vercel CLI 在本地运行完整环境
+npm i -g vercel
+vercel dev
+```
 
 ---
 

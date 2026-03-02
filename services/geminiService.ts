@@ -1,10 +1,4 @@
-
-import { GoogleGenAI } from "@google/genai";
-import { Language, Article, AISettings, AIModelConfig, AIProvider } from "../types";
-
-// Default System Fallback (Legacy)
-const systemApiKey = process.env.API_KEY || '';
-const systemAi = new GoogleGenAI({ apiKey: systemApiKey });
+import { Language, Article, AISettings, AIProvider } from "../types";
 
 // --- Helper: Get Config for Task ---
 const getModelForTask = (settings: AISettings | null, task: 'translation' | 'summary' | 'analysis'): { provider: AIProvider, modelId: string } | null => {
@@ -209,31 +203,11 @@ export const translateContent = async (
     ${content}
   `;
 
-  // 1. Try Custom Settings
   const config = getModelForTask(settings, 'translation');
-  if (config) {
-    // Directly return (or throw) so the UI receives the specific error from the custom provider
-    return await callLLM(config.provider, config.modelId, prompt);
+  if (!config) {
+    throw new Error("未配置 AI 提供商。请在设置中添加 API 提供商并配置翻译模型。");
   }
-
-  // 2. Fallback to System Default (Gemini SDK)
-  if (!systemApiKey) {
-    throw new Error("API Key 未配置。请在设置中添加 API 提供商，或配置系统环境变量。");
-  }
-
-  try {
-    const response = await systemAi.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: prompt,
-    });
-    return response.text || "翻译结果为空。";
-  } catch (error: any) {
-    console.error("System Gemini Error:", error);
-    let msg = error.message || "未知错误";
-    if (msg.includes('fetch failed')) msg = "网络连接失败 (System Gemini SDK)。请检查网络或代理。";
-    else if (msg.includes('401') || msg.includes('API key not valid')) msg = "System API Key 无效。";
-    throw new Error(`System Model Error: ${msg}`);
-  }
+  return await callLLM(config.provider, config.modelId, prompt);
 };
 
 /**
@@ -273,37 +247,18 @@ ${context}
 例如：["官方公告与新闻发布", "社区互动与粉丝福利", ...]
 `;
 
-  // 1. Try Custom Settings
   const config = getModelForTask(settings, 'analysis');
-  if (config) {
-    try {
-      const text = await callLLM(config.provider, config.modelId, prompt, true);
-      const result = JSON.parse(text);
-      return Array.isArray(result) ? result : [];
-    } catch (e: any) {
-      console.warn("Classification failed:", e);
-      throw new Error(`分类失败：${e.message}`);
-    }
-  }
-
-  // 2. Fallback to System Default
-  if (!systemApiKey) {
-    throw new Error("缺少系统 API Key，请在设置中配置。");
+  if (!config) {
+    throw new Error("未配置 AI 提供商。请在设置中添加 API 提供商并配置分析模型。");
   }
 
   try {
-    const response = await systemAi.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: prompt,
-      config: { responseMimeType: 'application/json' }
-    });
-    
-    const text = response.text || "[]";
+    const text = await callLLM(config.provider, config.modelId, prompt, true);
     const result = JSON.parse(text);
     return Array.isArray(result) ? result : [];
-  } catch (error: any) {
-    console.error("Gemini Classification Error:", error);
-    throw new Error(`System Gemini Error: ${error.message}`);
+  } catch (e: any) {
+    console.warn("Classification failed:", e);
+    throw new Error(`分类失败：${e.message}`);
   }
 };
 
@@ -370,30 +325,15 @@ ${dateStr}，${feedTitle}发布的内容如下。
     config = getModelForTask(settings, 'analysis');
   }
   
-  if (config) {
-    try {
-      const text = await callLLM(config.provider, config.modelId, prompt, false);
-      return text.trim() || "总结生成失败。";
-    } catch (e: any) {
-      console.warn("Summary generation failed:", e);
-      throw new Error(`总结生成失败：${e.message}`);
-    }
-  }
-
-  // 2. Fallback to System Default
-  if (!systemApiKey) {
-    throw new Error("缺少系统 API Key，请在设置中配置。");
+  if (!config) {
+    throw new Error("未配置 AI 提供商。请在设置中添加 API 提供商并配置总结或分析模型。");
   }
 
   try {
-    const response = await systemAi.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: prompt,
-    });
-    
-    return response.text?.trim() || "总结生成失败。";
-  } catch (error: any) {
-    console.error("Gemini Summary Error:", error);
-    throw new Error(`System Gemini Error: ${error.message}`);
+    const text = await callLLM(config.provider, config.modelId, prompt, false);
+    return text.trim() || "总结生成失败。";
+  } catch (e: any) {
+    console.warn("Summary generation failed:", e);
+    throw new Error(`总结生成失败：${e.message}`);
   }
 };

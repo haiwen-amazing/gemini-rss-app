@@ -146,13 +146,10 @@ const App: React.FC = () => {
   const [articleClassifications, setArticleClassifications] = useState<Record<string, string>>({});
   const [targetLang, setTargetLang] = useState<Language>(Language.CHINESE);
   const [translatedContent, setTranslatedContent] = useState<string | null>(null);
-  const [lastTranslatedLang, setLastTranslatedLang] = useState<Language | null>(null);
   const [showTranslation, setShowTranslation] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showScrollToTop, setShowScrollToTop] = useState(false);
-  const [pendingArticleId, setPendingArticleId] = useState<string | null>(null);
 
   const articleListRef = useRef<HTMLDivElement>(null);
   const scrollPositionsRef = useRef<Map<string, number>>(new Map());
@@ -290,7 +287,6 @@ const App: React.FC = () => {
     }
     setSelectedFeedMeta(meta);
     setActiveArticle(null);
-    setPendingArticleId(options?.articleId || null);
     setSelectedDate(null);
     setActiveFilters([]);
     setCurrentPage(1);  // 重置页码
@@ -635,9 +631,8 @@ const App: React.FC = () => {
             paginatedArticlesWithCategory={paginatedArticlesWithCategory} readArticleIds={readArticleIds}
             handleArticleSelect={handleArticleSelect} onRefresh={handleRefresh} isRefreshing={isRefreshing}
             currentPage={currentPage} setCurrentPage={handlePageChange} totalPages={totalPages}
-            filteredArticlesCount={filteredArticles.length} isLoadingMoreHistory={false} canLoadMoreHistory={false}
-            showScrollToTop={showScrollToTop} handleScrollToTop={() => {}}
-            articleListRef={articleListRef} visiblePageTokens={[]}
+            filteredArticlesCount={filteredArticles.length}
+            articleListRef={articleListRef}
             feedId={selectedFeedMeta.id}
             initialScrollPosition={scrollPositionsRef.current.get(selectedFeedMeta.id) ?? 0}
             onScrollPositionChange={handleScrollPositionChange}

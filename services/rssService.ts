@@ -20,10 +20,6 @@ export const setImageProxyMode = (mode: ImageProxyMode): void => {
   currentImageProxyMode = mode;
 };
 
-export const getImageProxyMode = (): ImageProxyMode => {
-  return currentImageProxyMode;
-};
-
 export const setCurrentFeedCanProxyImages = (canProxy: boolean): void => {
   currentFeedCanProxyImages = canProxy;
 };
