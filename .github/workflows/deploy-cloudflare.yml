@@ -2,7 +2,9 @@ name: Deploy to Cloudflare Pages
 
 on:
   push:
-    branches: [vercel-neon-refactor]
+    branches:
+      - vercel-neon-refactor  # Production branch
+      - '**'                  # All other branches (preview)
 
 jobs:
   deploy:
@@ -26,8 +28,18 @@ jobs:
           sed -i "s/database_id = \"\"/database_id = \"${{ secrets.D1_DATABASE_ID }}\"/" wrangler.toml
           sed -i "s/^id = \"\"/id = \"${{ secrets.KV_NAMESPACE_ID }}\"/" wrangler.toml
 
-      - uses: cloudflare/wrangler-action@v3
+      - name: Deploy to Cloudflare Pages (Production)
+        if: github.ref == 'refs/heads/vercel-neon-refactor'
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=gemini-rss-app
+          command: pages deploy dist --project-name=gemini-rss-app --branch=${{ github.ref_name }} --commit-hash=${{ github.sha }} --commit-message="${{ github.event.head_commit.message }}" --production
+
+      - name: Deploy to Cloudflare Pages (Preview)
+        if: github.ref != 'refs/heads/vercel-neon-refactor'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=gemini-rss-app --branch=${{ github.ref_name }} --commit-hash=${{ github.sha }} --commit-message="${{ github.event.head_commit.message }}"

@@ -115,6 +115,8 @@ Production deploys to Cloudflare Pages via `.github/workflows/deploy-cloudflare.
 | `D1_DATABASE_ID` | D1 database ID (injected into `wrangler.toml`) |
 | `KV_NAMESPACE_ID` | KV namespace ID (injected into `wrangler.toml`) |
 
+**Note:** The workflow automatically distinguishes between production (main branch) and preview (other branches) deployments. See `docs/cloudflare-deployment.md` for details on the CI/CD flow, production/preview configuration, and why "No Git connection" appears in the Cloudflare Dashboard.
+
 ## Path Alias
 
 `@/` maps to the project root (configured in both `vite.config.ts` and `tsconfig.json`).

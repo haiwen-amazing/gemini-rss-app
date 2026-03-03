@@ -128,6 +128,7 @@ npm run preview:cf
 |------|------|
 | [Vercel 部署教程](docs/deploy-vercel.md) | 小白友好，纯网页操作，20 分钟完成 |
 | [Cloudflare Pages 部署教程](docs/deploy-cloudflare.md) | 小白友好，需要命令行，支持 GitHub Actions 自动部署 |
+| [Cloudflare 部署说明](docs/cloudflare-deployment.md) | Cloudflare Pages 的 CI/CD 流程、Production/Preview 配置详解 |
 | [Docker → Vercel 迁移指南](docs/migration-docker-to-vercel.md) | 从旧版 Docker 部署迁移到 Vercel |
 | [重构记录](docs/refactoring-summary.md) | Docker/Node.js → Serverless 架构的重构历史 |
 

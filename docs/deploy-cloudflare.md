@@ -189,6 +189,12 @@ git push origin vercel-neon-refactor
 
 > 可以在 GitHub 仓库的 **Actions** 标签页查看部署进度和日志。
 
+> **想了解更多？** 查看 [Cloudflare 部署说明](cloudflare-deployment.md) 了解：
+> - Production 和 Preview 部署的区别
+> - 为什么显示 "No Git connection"
+> - 如何更改 Production 分支
+> - CI/CD 流程的详细说明
+
 ### 手动部署（备选）
 
 如果你不想用自动部署，也可以在本地手动部署：
