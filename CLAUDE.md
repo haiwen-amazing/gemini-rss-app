@@ -11,7 +11,7 @@ npm run preview    # Preview production build locally
 
 # Cloudflare Pages
 npm run preview:cf            # Build + local CF Pages dev server
-npm run deploy:cf             # Build + deploy to CF Pages
+npm run deploy:cf             # Build + manual deploy to CF Pages (needs real IDs in wrangler.toml)
 npm run db:generate:d1        # Generate D1 (SQLite) migrations
 npm run db:migrate:d1:local   # Apply D1 migrations locally
 npm run db:migrate:d1:remote  # Apply D1 migrations to production
@@ -101,6 +101,19 @@ Do not bypass security checks when adding new proxy or fetch functionality.
 | `ADMIN_SECRET` | Secret | Protects feed write operations |
 | `RATE_LIMIT_KV` | KV binding | Distributed rate limiting |
 | `MEDIA_PROXY_MAX_BYTES` | Secret | Max proxied media size (default 50 MB) |
+
+### CI/CD (GitHub Actions)
+
+Production deploys to Cloudflare Pages via `.github/workflows/deploy-cloudflare.yml`, triggered on push to `vercel-neon-refactor`.
+
+`wrangler.toml` contains empty placeholders for D1/KV IDs; the workflow injects real values from GitHub Secrets at deploy time.
+
+| GitHub Secret | Purpose |
+|---------------|---------|
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API token (Pages + D1 + KV permissions) |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account identifier |
+| `D1_DATABASE_ID` | D1 database ID (injected into `wrangler.toml`) |
+| `KV_NAMESPACE_ID` | KV namespace ID (injected into `wrangler.toml`) |
 
 ## Path Alias
 

@@ -23,7 +23,7 @@
 | **数据库** | Neon PostgreSQL | D1 (SQLite)，可 fallback Neon |
 | **冷启动** | ~1 秒 | ~0 毫秒 |
 | **免费存储** | 0.5 GB | 5 GB |
-| **适合场景** | 快速上手，纯网页操作 | 更低延迟，更大免费额度 |
+| **适合场景** | 快速上手，纯网页操作 | 更低延迟，更大免费额度，GitHub push 自动部署 |
 | **部署教程** | [Vercel 部署教程](docs/deploy-vercel.md) | [Cloudflare Pages 部署教程](docs/deploy-cloudflare.md) |
 
 > 两份教程都是小白友好的，从注册账号开始手把手教你，不需要任何编程经验。
@@ -127,7 +127,7 @@ npm run preview:cf
 | 文档 | 说明 |
 |------|------|
 | [Vercel 部署教程](docs/deploy-vercel.md) | 小白友好，纯网页操作，20 分钟完成 |
-| [Cloudflare Pages 部署教程](docs/deploy-cloudflare.md) | 小白友好，需要命令行，30 分钟完成 |
+| [Cloudflare Pages 部署教程](docs/deploy-cloudflare.md) | 小白友好，需要命令行，支持 GitHub Actions 自动部署 |
 | [Docker → Vercel 迁移指南](docs/migration-docker-to-vercel.md) | 从旧版 Docker 部署迁移到 Vercel |
 | [重构记录](docs/refactoring-summary.md) | Docker/Node.js → Serverless 架构的重构历史 |
 

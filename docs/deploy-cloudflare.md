@@ -117,27 +117,22 @@ id = "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
 
 ---
 
-## 第六步：更新配置文件
+## 第六步：配置 GitHub Secrets
 
-用任意文本编辑器（记事本也行）打开项目根目录的 `wrangler.toml` 文件，把之前复制的 ID 填进去：
+项目使用 GitHub Actions 自动部署，D1 和 KV 的 ID 不需要写入代码，而是通过 GitHub Secrets 安全注入。
 
-```toml
-name = "gemini-rss-app"
-compatibility_date = "2024-12-01"
-compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = "dist"
+1. 打开你 Fork 的仓库页面
+2. 点击 **Settings** → 左侧 **Secrets and variables** → **Actions**
+3. 点击 **New repository secret**，依次添加以下 4 个 secret：
 
-[[d1_databases]]
-binding = "DB"
-database_name = "gemini-rss-db"
-database_id = "在这里粘贴你的 database_id"    # ← 改这里
+| Secret 名称 | 值 | 来源 |
+|---|---|---|
+| `CLOUDFLARE_ACCOUNT_ID` | 你的 Cloudflare 账户 ID | Cloudflare Dashboard 右侧栏 / Workers & Pages 概览页 |
+| `CLOUDFLARE_API_TOKEN` | API 令牌 | [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens) → 使用 **Edit Cloudflare Workers** 模板，并添加 **Cloudflare Pages: Edit**、**D1: Edit**、**Workers KV Storage: Edit** 权限 |
+| `D1_DATABASE_ID` | 第四步复制的 database_id | `wrangler d1 create` 的输出 |
+| `KV_NAMESPACE_ID` | 第五步复制的 KV id | `wrangler kv namespace create` 的输出 |
 
-[[kv_namespaces]]
-binding = "RATE_LIMIT_KV"
-id = "在这里粘贴你的 KV id"                   # ← 改这里
-```
-
-保存文件。
+> `wrangler.toml` 中的 ID 留空即可，GitHub Actions 会在部署时自动填充。
 
 ---
 
@@ -161,58 +156,47 @@ npm run db:migrate:d1:remote
 
 ---
 
-## 第八步：设置密钥
+## 第八步：设置管理密码
 
 管理后台需要密码保护。执行以下命令设置密钥：
 
 ```bash
 # 设置管理密码（会提示你输入密码，输入时不会显示字符，这是正常的）
-wrangler pages secret put ADMIN_SECRET
+wrangler pages secret put ADMIN_SECRET --project-name=gemini-rss-app
 ```
 
 输入你想要的管理密码，按回车确认。
 
+> 首次执行此命令前需要先创建 Pages 项目：`wrangler pages project create gemini-rss-app`
+
 > **可选**：如果你还想使用 Neon PostgreSQL 作为备用数据库（有 D1 的情况下不需要）：
 > ```bash
-> wrangler pages secret put DATABASE_URL
+> wrangler pages secret put DATABASE_URL --project-name=gemini-rss-app
 > ```
 
 ---
 
 ## 第九步：部署
 
-### 方法一：命令行部署（推荐首次使用）
+项目已配置 GitHub Actions 自动部署。只需把代码推送到 `vercel-neon-refactor` 分支，即可自动构建并部署到 Cloudflare Pages。
 
 ```bash
-# 构建并部署
+# 推送代码，GitHub Actions 会自动部署
+git push origin vercel-neon-refactor
+```
+
+部署成功后，你的网站地址是：`https://gemini-rss-app.pages.dev`（或你自定义的项目名）。
+
+> 可以在 GitHub 仓库的 **Actions** 标签页查看部署进度和日志。
+
+### 手动部署（备选）
+
+如果你不想用自动部署，也可以在本地手动部署：
+
+```bash
+# 需要先在 wrangler.toml 中填入真实的 D1/KV ID
 npm run deploy:cf
 ```
-
-首次部署时，Wrangler 会问你一些问题：
-- **Create a new project?** → 输入 `Y`
-- **Project name** → 直接回车用默认值，或者输入你想要的名字
-- **Production branch** → 输入 `main`（或你的默认分支名）
-
-部署成功后会显示你的网址，比如：
-
-```
-✨ Deployment complete!
-https://gemini-rss-app.pages.dev
-```
-
-### 方法二：通过 Cloudflare Dashboard 部署
-
-1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com)
-2. 左侧点击 **Workers & Pages**
-3. 点击 **Create** → **Pages** → **Connect to Git**
-4. 选择你 Fork 的 GitHub 仓库
-5. 配置：
-   - **Production branch**: 你的默认分支（通常是 `main`）
-   - **Build command**: `npm run build`
-   - **Build output directory**: `dist`
-6. 点击 **Save and Deploy**
-
-> 通过 Dashboard 部署后，还需要在 **Settings → Functions → D1 database bindings** 中手动绑定 D1 和 KV，比较麻烦。推荐用命令行方式。
 
 ---
 
@@ -274,16 +258,17 @@ npm run preview:cf
 
 ### 怎么更新版本？
 
-```bash
-# 同步上游代码
-git fetch upstream
-git merge upstream/main
+如果你 Fork 了本项目，在 GitHub 上点击 **Sync fork** 同步上游代码，GitHub Actions 会自动重新部署。
 
-# 重新部署
-npm run deploy:cf
+或者手动同步：
+
+```bash
+git fetch upstream
+git merge upstream/vercel-neon-refactor
+git push
 ```
 
-或者如果你用的是 Dashboard 部署方式，在 GitHub 上 **Sync fork** 后会自动重新部署。
+推送后 GitHub Actions 会自动部署最新版本。
 
 ---
 

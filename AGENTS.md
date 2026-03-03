@@ -46,8 +46,9 @@ Gemini RSS Translator: A React 19 + Vite SPA for RSS aggregation, AI translation
 | Security (CF) | `server/security.ts` | No Node.js deps, CF fetch blocks private IPs |
 | AI Prompting | `services/geminiService.ts` | Translation & Analysis logic |
 | Rate Limiting | `server/rate-limit.ts` | KV-backed + InMemory fallback |
-| CF Config | `wrangler.toml` | D1, KV bindings, compatibility flags |
+| CF Config | `wrangler.toml` | D1, KV bindings (IDs are placeholders, injected by CI) |
 | CF Routing | `public/_routes.json` | Only `/api/*` → Functions |
+| CI/CD | `.github/workflows/deploy-cloudflare.yml` | Auto-deploy to CF Pages on push to `vercel-neon-refactor` |
 
 ## CONVENTIONS
 - **Dual Backend**: Vercel code in `/api` + `/lib`, CF code in `/functions` + `/server`. Don't mix.
@@ -76,7 +77,7 @@ npm run dev                    # Local Vite dev server
 npm run build                  # Frontend build verification
 vercel dev                     # Full Vercel environment (legacy)
 npm run preview:cf             # Build + local CF Pages dev server
-npm run deploy:cf              # Build + deploy to CF Pages
+npm run deploy:cf              # Build + manual deploy to CF Pages (needs real IDs in wrangler.toml)
 npm run db:generate:d1         # Generate D1 migrations
 npm run db:migrate:d1:local    # Apply D1 migrations locally
 npx drizzle-kit push           # Sync PG schema to Neon
