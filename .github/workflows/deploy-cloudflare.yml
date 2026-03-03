@@ -34,7 +34,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=gemini-rss-app --branch=${{ github.ref_name }} --commit-hash=${{ github.sha }} --commit-message="${{ github.event.head_commit.message }}" --production
+          command: pages deploy dist --project-name=gemini-rss-app --branch=${{ github.ref_name }} --commit-hash=${{ github.sha }} --production
 
       - name: Deploy to Cloudflare Pages (Preview)
         if: github.ref != 'refs/heads/vercel-neon-refactor'
@@ -42,4 +42,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=gemini-rss-app --branch=${{ github.ref_name }} --commit-hash=${{ github.sha }} --commit-message="${{ github.event.head_commit.message }}"
+          command: pages deploy dist --project-name=gemini-rss-app --branch=${{ github.ref_name }} --commit-hash=${{ github.sha }}
