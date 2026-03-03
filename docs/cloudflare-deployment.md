@@ -10,32 +10,36 @@ Cloudflare 的原生 Git 集成无法在构建时动态注入 D1/KV 资源 ID。
 
 ## Production vs Preview
 
-### 当前配置
+### 配置 Production Branch
 
-- **Production 分支**: `vercel-neon-refactor`
-  - 推送到此分支会触发 production 部署（带 `--production` 标志）
-  - 在 Cloudflare Dashboard 中显示为 "Production"
+Cloudflare Pages 通过 **Production branch** 设置来自动判断部署类型：
 
-- **Preview 分支**: 所有其他分支
-  - 推送到其他分支会触发 preview 部署
-  - 在 Cloudflare Dashboard 中显示为 "Preview"
+1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com)
+2. 进入 **Workers & Pages** → 选择你的项目（`gemini-rss-app`）
+3. 点击 **Settings** → **Builds & deployments**
+4. 在 **Production branch** 中设置为 `vercel-neon-refactor`（或你的主分支名称）
+5. 保存设置
+
+**配置后的行为：**
+- 推送到 `vercel-neon-refactor` 分支 → **Production** 部署
+- 推送到其他分支 → **Preview** 部署
+
+### 当前 Workflow 配置
+
+GitHub Actions workflow (`.github/workflows/deploy-cloudflare.yml`) 会：
+- 监听所有分支的推送
+- 传递分支名称和 commit hash 给 Cloudflare
+- Cloudflare 根据 Production branch 设置自动判断部署类型
 
 ### 如何更改 Production 分支
 
-编辑 `.github/workflows/deploy-cloudflare.yml`，修改以下两处：
+**方法 1：在 Cloudflare Dashboard 中更改**（推荐）
+1. Workers & Pages → 项目 → Settings → Builds & deployments
+2. 修改 **Production branch** 设置
+3. 保存
 
-```yaml
-on:
-  push:
-    branches:
-      - your-main-branch  # 改为你的主分支名称
-      - '**'
-
-# ...
-
-- name: Deploy to Cloudflare Pages (Production)
-  if: github.ref == 'refs/heads/your-main-branch'  # 改为你的主分支名称
-```
+**方法 2：修改 Workflow（不推荐）**
+如果你想限制只有特定分支触发部署，可以修改 `.github/workflows/deploy-cloudflare.yml` 中的 `on.push.branches`。
 
 ## Git 信息追踪
 
