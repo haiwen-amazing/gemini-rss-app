@@ -28,9 +28,15 @@ jobs:
           sed -i "s/database_id = \"\"/database_id = \"${{ secrets.D1_DATABASE_ID }}\"/" wrangler.toml
           sed -i "s/^id = \"\"/id = \"${{ secrets.KV_NAMESPACE_ID }}\"/" wrangler.toml
 
+      - name: Sanitize commit message
+        id: commit-msg
+        run: |
+          MSG=$(git log -1 --pretty=%s | iconv -t UTF-8//IGNORE | tr -d '\000-\011\013-\037')
+          echo "msg=$MSG" >> "$GITHUB_OUTPUT"
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=gemini-rss-app --branch=${{ github.ref_name }} --commit-hash=${{ github.sha }}
+          command: pages deploy dist --project-name=gemini-rss-app --branch=${{ github.ref_name }} --commit-hash=${{ github.sha }} --commit-message="${{ steps.commit-msg.outputs.msg }}"
