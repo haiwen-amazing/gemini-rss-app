@@ -113,6 +113,31 @@ export const fetchProviderModels = async (provider: AIProvider): Promise<string[
   }
 };
 
+const extractContentFromResponse = (data: any, providerType: string): string => {
+  if (providerType === 'gemini') {
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+  
+  if (providerType === 'openai') {
+    return data.choices?.[0]?.message?.content || '';
+  }
+  
+  if (providerType === 'openai-responses') {
+    return data.output_text || data.output?.[0]?.content?.[0]?.text || '';
+  }
+  
+  if (providerType === 'anthropic') {
+    if (data.choices?.[0]?.message?.content) {
+      return data.choices[0].message.content;
+    }
+    if (data.content?.[0]?.text) {
+      return data.content[0].text;
+    }
+  }
+  
+  return '';
+};
+
 const callLLM = async (
   provider: AIProvider,
   modelId: string,
@@ -145,8 +170,8 @@ const callLLM = async (
         if (!response.ok) {
           throw new Error(await parseApiError(response, providerLabel));
         }
-        const geminiData = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-        return geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const data = await response.json();
+        return extractContentFromResponse(data, 'gemini');
       }
 
       case 'openai': {
@@ -169,8 +194,8 @@ const callLLM = async (
         if (!response.ok) {
           throw new Error(await parseApiError(response, providerLabel));
         }
-        const openaiData = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
-        return openaiData.choices?.[0]?.message?.content || '';
+        const data = await response.json();
+        return extractContentFromResponse(data, 'openai');
       }
 
       case 'openai-responses': {
@@ -195,8 +220,8 @@ const callLLM = async (
         if (!response.ok) {
           throw new Error(await parseApiError(response, providerLabel));
         }
-        const respData = await response.json() as { output_text?: string; output?: Array<{ content?: Array<{ text?: string }> }> };
-        return respData.output_text || respData.output?.[0]?.content?.[0]?.text || '';
+        const data = await response.json();
+        return extractContentFromResponse(data, 'openai-responses');
       }
 
       case 'anthropic': {
@@ -220,8 +245,8 @@ const callLLM = async (
         if (!response.ok) {
           throw new Error(await parseApiError(response, providerLabel));
         }
-        const anthropicData = await response.json() as { content?: Array<{ text?: string }> };
-        return anthropicData.content?.[0]?.text || '';
+        const data = await response.json();
+        return extractContentFromResponse(data, 'anthropic');
       }
 
       default:
