@@ -1,17 +1,14 @@
 import { Language, Article, AISettings, AIProvider } from "../types";
 
-// --- Helper: Get Config for Task ---
 const getModelForTask = (settings: AISettings | null, task: 'translation' | 'summary' | 'analysis'): { provider: AIProvider, modelId: string } | null => {
   if (!settings) return null;
 
-  // 1. Try Specific Task Config
   const taskConfig = settings.tasks[task];
   if (taskConfig && taskConfig.providerId) {
     const provider = settings.providers.find(p => p.id === taskConfig.providerId);
     if (provider) return { provider, modelId: taskConfig.modelId };
   }
 
-  // 2. Fallback to General Config
   const generalConfig = settings.tasks.general;
   if (generalConfig && generalConfig.providerId) {
     const provider = settings.providers.find(p => p.id === generalConfig.providerId);
@@ -21,7 +18,6 @@ const getModelForTask = (settings: AISettings | null, task: 'translation' | 'sum
   return null;
 };
 
-// --- Helper: Parse API Error to Chinese ---
 const parseApiError = async (response: Response, providerName: string): Promise<string> => {
   let errorBody = "";
   try {
@@ -34,7 +30,6 @@ const parseApiError = async (response: Response, providerName: string): Promise<
   try {
     const json = JSON.parse(errorBody);
     if (json.error) {
-       // Gemini often uses error.message, OpenAI uses error.message or just string
        const errObj = json.error;
        if (typeof errObj === 'string') details = errObj;
        else if (errObj.message) details = errObj.type ? `[${errObj.type}] ${errObj.message}` : errObj.message;
@@ -58,7 +53,6 @@ const parseApiError = async (response: Response, providerName: string): Promise<
   return `${summary}。\n来自 ${providerName} 的反馈：${details}`;
 };
 
-// --- Helper: Fetch Models List ---
 export const fetchProviderModels = async (provider: AIProvider): Promise<string[]> => {
   const baseUrl = provider.baseUrl.replace(/\/+$/, '');
 
@@ -119,18 +113,16 @@ export const fetchProviderModels = async (provider: AIProvider): Promise<string[
   }
 };
 
-// --- Helper: Call LLM (Generic) ---
 const callLLM = async (
   provider: AIProvider,
   modelId: string,
   prompt: string,
   jsonMode: boolean = false
 ): Promise<string> => {
-  // Clean URL: Remove trailing slash
   const baseUrl = provider.baseUrl.replace(/\/+$/, '');
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s Timeout
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
 
   try {
     let response: Response;
@@ -239,7 +231,6 @@ const callLLM = async (
     if (e instanceof Error && e.name === 'AbortError') {
       throw new Error(`请求超时：连接 API 服务器超过 60 秒无响应。请检查您的网络连接或代理配置。`);
     }
-    // Handle standard fetch network errors (DNS, Connection Refused, CORS)
     if (e instanceof TypeError && e.message === 'Failed to fetch') {
       throw new Error(`网络连接失败：无法连接到 ${baseUrl}。\n可能原因：\n1. 域名解析失败或地址错误\n2. 网络环境无法访问该地址 (需检查 VPN/代理)\n3. 浏览器跨域 (CORS) 限制`);
     }
@@ -277,10 +268,24 @@ export const translateContent = async (
   return await callLLM(config.provider, config.modelId, prompt);
 };
 
-/**
- * 快速分类文章（第一步）
- * 仅返回分类结果，Prompt 更短，响应更快
- */
+const extractJsonFromText = (text: string): string => {
+  const trimmed = text.trim();
+  
+  const firstBracket = trimmed.indexOf('[');
+  const lastBracket = trimmed.lastIndexOf(']');
+  if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+    return trimmed.substring(firstBracket, lastBracket + 1);
+  }
+  
+  const firstBrace = trimmed.indexOf('{');
+  const lastBrace = trimmed.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    return trimmed.substring(firstBrace, lastBrace + 1);
+  }
+  
+  return trimmed;
+};
+
 export const classifyArticles = async (
   articles: Article[],
   settings: AISettings | null = null
@@ -289,7 +294,6 @@ export const classifyArticles = async (
     return [];
   }
 
-  // Context preparation - 使用更短的描述以加快响应
   const context = articles.map((a, index) => 
     `${index}. ${a.title}${a.description ? ` - ${a.description.replace(/<[^>]+>/g, '').substring(0, 150)}` : ''}`
   ).join('\n');
@@ -312,6 +316,8 @@ ${context}
 输出格式：
 返回 JSON 数组，顺序与输入文章一致。
 例如：["官方公告与新闻发布", "社区互动与粉丝福利", ...]
+
+重要：只返回 JSON 数组，不要包含任何其他文本、解释或 markdown 格式。
 `;
 
   const config = getModelForTask(settings, 'analysis');
@@ -321,18 +327,39 @@ ${context}
 
   try {
     const text = await callLLM(config.provider, config.modelId, prompt, true);
-    const result = JSON.parse(text);
-    return Array.isArray(result) ? result : [];
+    console.log("Classification raw response:", text);
+    
+    const jsonText = extractJsonFromText(text);
+    console.log("Extracted JSON:", jsonText);
+    
+    let result;
+    try {
+      result = JSON.parse(jsonText);
+    } catch (parseError) {
+      console.warn("First parse failed, trying fallback...");
+      const match = jsonText.match(/\[.*\]/s);
+      if (match) {
+        result = JSON.parse(match[0]);
+      } else {
+        throw parseError;
+      }
+    }
+    
+    if (!Array.isArray(result)) {
+      throw new Error("返回的结果不是数组");
+    }
+    
+    if (result.length !== articles.length) {
+      console.warn(`Classification result length (${result.length}) does not match articles length (${articles.length})`);
+    }
+    
+    return result;
   } catch (e: unknown) {
     console.warn("Classification failed:", e);
     throw new Error(`分类失败：${e instanceof Error ? e.message : String(e)}`);
   }
 };
 
-/**
- * 生成每日总结（第二步）
- * 接收分类结果作为输入，生成结构化总结
- */
 export const generateDailySummary = async (
   feedTitle: string,
   date: Date,
@@ -346,7 +373,6 @@ export const generateDailySummary = async (
 
   const dateStr = date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
   
-  // 按分类组织文章
   const categorizedArticles = articles.map((a, index) => ({
     title: a.title,
     category: classifications[index] || "未分类",
@@ -386,7 +412,6 @@ ${dateStr}，${feedTitle}发布的内容如下。
 直接返回总结文本，不要包含任何 JSON 格式。
 `;
 
-  // 1. Try Custom Settings (Prefer Summary config, fallback to Analysis)
   let config = getModelForTask(settings, 'summary');
   if (!config) {
     config = getModelForTask(settings, 'analysis');
@@ -398,6 +423,7 @@ ${dateStr}，${feedTitle}发布的内容如下。
 
   try {
     const text = await callLLM(config.provider, config.modelId, prompt, false);
+    console.log("Summary raw response:", text);
     return text.trim() || "总结生成失败。";
   } catch (e: unknown) {
     console.warn("Summary generation failed:", e);
