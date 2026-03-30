@@ -269,7 +269,11 @@ export const translateContent = async (
 };
 
 const extractJsonFromText = (text: string): string => {
-  const trimmed = text.trim();
+  let trimmed = text.trim();
+  
+  trimmed = trimmed.replace(/^```(?:json)?\s*/i, '');
+  trimmed = trimmed.replace(/```\s*$/i, '');
+  trimmed = trimmed.trim();
   
   const firstBracket = trimmed.indexOf('[');
   const lastBracket = trimmed.lastIndexOf(']');
